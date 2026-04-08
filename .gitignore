@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment Variables (CRITICAL)
+.env
+.env.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Large/Auto-generated Files
+*.pdf
+package-lock.json (Optional, but usually ignored in small teams)
