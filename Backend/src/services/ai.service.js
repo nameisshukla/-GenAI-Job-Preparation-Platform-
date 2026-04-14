@@ -39,16 +39,73 @@ Do NOT leave any array empty.
 `;
 
     const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-2.5-flash-lite",
     contents: prompt,
     config: {
         responseMimeType: "application/json",
-        responseSchema: zodToJsonSchema(interviewReportSchema, { $refStrategy: "none" }),
         maxOutputTokens: 8192,
+        responseSchema: {
+            type: "object",
+            properties: {
+                matchScore: { type: "number" },
+                title: { type: "string" },
+                technicalQuestions: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            question: { type: "string" },
+                            intention: { type: "string" },
+                            answer: { type: "string" }
+                        },
+                        required: ["question", "intention", "answer"]
+                    }
+                },
+                behavioralQuestions: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            question: { type: "string" },
+                            intention: { type: "string" },
+                            answer: { type: "string" }
+                        },
+                        required: ["question", "intention", "answer"]
+                    }
+                },
+                skillGaps: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            skill: { type: "string" },
+                            severity: { type: "string", enum: ["low", "medium", "high"] }
+                        },
+                        required: ["skill", "severity"]
+                    }
+                },
+                preparationPlan: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            day: { type: "number" },
+                            focus: { type: "string" },
+                            tasks: { type: "array", items: { type: "string" } }
+                        },
+                        required: ["day", "focus", "tasks"]
+                    }
+                }
+            },
+            required: ["matchScore", "title", "technicalQuestions", "behavioralQuestions", "skillGaps", "preparationPlan"]
+        }
     }
-});
 
-return JSON.parse(response.text);
+    });
+    
+       const parsed = JSON.parse(response.text);
+       console.log("AI Response:", JSON.stringify(parsed, null, 2));
+       return parsed;
 }
 
 async function generatePdfFromHtml(htmlContent) {
