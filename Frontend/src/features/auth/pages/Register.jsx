@@ -1,5 +1,5 @@
 import React,{useState} from 'react'
-import { useNavigate, Link } from 'react-router'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 const Register = () => {
@@ -8,13 +8,21 @@ const Register = () => {
     const [ username, setUsername ] = useState("")
     const [ email, setEmail ] = useState("")
     const [ password, setPassword ] = useState("")
+    const [ error, setError ] = useState(null)
 
     const {loading,handleRegister} = useAuth()
     
     const handleSubmit = async (e) => {
         e.preventDefault()
-        await handleRegister({username,email,password})
-        navigate("/")
+        setError(null)
+        const result = await handleRegister({username,email,password})
+        if (result?.success) {
+            navigate("/")
+        } else {
+            const errorMsg = typeof result?.error === 'string' ? result.error : (result?.error?.message || "Registration failed");
+            setError(errorMsg);
+            alert("REGISTRATION FAILED! Error Details:\n\n" + errorMsg + "\n\nIf you see 'Network Error', your Frontend cannot reach the Backend. Check your VITE_API_URL!");
+        }
     }
 
     if(loading){
@@ -25,6 +33,7 @@ const Register = () => {
         <main>
             <div className="form-container">
                 <h1>Register</h1>
+                {error && <div className="error-message" style={{color: 'red', marginBottom: '1rem'}}>{error}</div>}
 
                 <form onSubmit={handleSubmit}>
 

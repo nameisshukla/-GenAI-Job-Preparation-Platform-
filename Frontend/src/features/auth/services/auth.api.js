@@ -16,9 +16,8 @@ export async function register({ username, email, password }) {
         return response.data
 
     } catch (err) {
-
         console.log(err)
-
+        throw err.response?.data?.message || err.message || "An error occurred during registration"
     }
 
 }
@@ -35,6 +34,7 @@ export async function login({ email, password }) {
 
     } catch (err) {
         console.log(err)
+        throw err.response?.data?.message || err.message || "An error occurred during login"
     }
 
 }
@@ -47,7 +47,8 @@ export async function logout() {
         return response.data
 
     } catch (err) {
-
+        console.log(err)
+        throw err.response?.data?.message || err.message || "An error occurred during logout"
     }
 }
 
@@ -61,6 +62,7 @@ export async function getMe() {
 
     } catch (err) {
         console.log(err)
+        throw err.response?.data?.message || err.message || "An error occurred while fetching user"
     }
 
 }
