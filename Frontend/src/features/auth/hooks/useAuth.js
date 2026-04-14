@@ -14,7 +14,17 @@ export const useAuth = () => {
         setLoading(true)
         try {
             const data = await login({ email, password })
-            setUser(data.user)
+            
+            if (data && data.user) {
+                setUser(data.user)
+            } else if (data) {
+                // Fallback for older backend versions that might return flat data
+                alert("DEBUG WARNING: Backend did not return a 'user' object securely. Returned: " + JSON.stringify(data));
+                setUser(data)
+            } else {
+                throw new Error("Backend returned no data");
+            }
+            
             return { success: true }
         } catch (err) {
             return { success: false, error: err }
