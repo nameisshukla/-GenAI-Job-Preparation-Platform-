@@ -11,14 +11,7 @@ const Protected = ({children}) => {
     }
 
     if(!user){
-        return (
-            <main style={{backgroundColor: 'black', color: 'red', border: '5px solid red', padding: "50px", width: "100vw", height: "100vh"}}>
-                <h1>FATAL ERROR: Protected Route Blocked You!</h1>
-                <p>The code reached the Protected route, but the 'user' object is NULL.</p>
-                <p>This means your login was "successful", but the user data failed to save to the context, or the context resets!</p>
-                <p>Please check your backend API response, or tell me about this red screen!</p>
-            </main>
-        )
+        return <Navigate to="/login" replace />
     }
     
     return children
