@@ -2,11 +2,12 @@ const { GoogleGenAI } = require("@google/genai");
 const { z } = require("zod");
 const { zodToJsonSchema } = require("zod-to-json-schema");
 const puppeteer = require("puppeteer-core");
+const fs = require("fs");
 
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY });
 
 const interviewReportSchema = z.object({
-    matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
+    matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job description"),
     technicalQuestions: z.array(z.object({
         question: z.string().describe("The technical question can be asked in the interview"),
         intention: z.string().describe("The intention of interviewer behind asking this question"),
@@ -39,68 +40,13 @@ Do NOT leave any array empty.
 `;
 
     const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-lite",
-    contents: prompt,
-    config: {
-        responseMimeType: "application/json",
-        maxOutputTokens: 8192,
-        responseSchema: {
-            type: "object",
-            properties: {
-                matchScore: { type: "number" },
-                title: { type: "string" },
-                technicalQuestions: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            question: { type: "string" },
-                            intention: { type: "string" },
-                            answer: { type: "string" }
-                        },
-                        required: ["question", "intention", "answer"]
-                    }
-                },
-                behavioralQuestions: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            question: { type: "string" },
-                            intention: { type: "string" },
-                            answer: { type: "string" }
-                        },
-                        required: ["question", "intention", "answer"]
-                    }
-                },
-                skillGaps: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            skill: { type: "string" },
-                            severity: { type: "string", enum: ["low", "medium", "high"] }
-                        },
-                        required: ["skill", "severity"]
-                    }
-                },
-                preparationPlan: {
-                    type: "array",
-                    items: {
-                        type: "object",
-                        properties: {
-                            day: { type: "number" },
-                            focus: { type: "string" },
-                            tasks: { type: "array", items: { type: "string" } }
-                        },
-                        required: ["day", "focus", "tasks"]
-                    }
-                }
-            },
-            required: ["matchScore", "title", "technicalQuestions", "behavioralQuestions", "skillGaps", "preparationPlan"]
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 8192,
+            responseSchema: zodToJsonSchema(interviewReportSchema)
         }
-    }
-
     });
     
        const parsed = JSON.parse(response.text);
@@ -109,24 +55,42 @@ Do NOT leave any array empty.
 }
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch({
-        executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    const launchOptions = {
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    };
 
-    const pdfBuffer = await page.pdf({
-        format: "A4",
-        margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    } else if (process.platform === "win32") {
+        launchOptions.executablePath = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+    } else {
+        if (fs.existsSync('/usr/bin/google-chrome')) {
+            launchOptions.executablePath = '/usr/bin/google-chrome';
+        } else if (fs.existsSync('/usr/bin/google-chrome-stable')) {
+            launchOptions.executablePath = '/usr/bin/google-chrome-stable';
         }
-    });
+    }
 
-    await browser.close();
-    return pdfBuffer;
+    console.log("Launching Puppeteer with options:", JSON.stringify(launchOptions));
+    const browser = await puppeteer.launch(launchOptions);
+    try {
+        const page = await browser.newPage();
+        await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+
+        const pdfBuffer = await page.pdf({
+            format: "A4",
+            margin: {
+                top: "20mm",
+                bottom: "20mm",
+                left: "15mm",
+                right: "15mm"
+            }
+        });
+        return pdfBuffer;
+    } finally {
+        await browser.close();
+    }
 }
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
